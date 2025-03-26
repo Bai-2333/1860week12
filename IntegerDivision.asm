@@ -27,7 +27,7 @@ M=1
 D=-D
 (X_POSITIVE)
 @R6
-M=D
+M=D        // R6 = |x|
 
 // Store absolute value of R1 (y) in R8, and y < 0 flag in R9
 @R1
@@ -41,7 +41,7 @@ M=1
 D=-D
 (Y_POSITIVE)
 @R8
-M=D
+M=D        // R8 = |y|
 
 // Loop: Subtract y from x until x < y
 (LOOP)
@@ -51,8 +51,6 @@ D=M
 D=D-M
 @AFTER_LOOP
 D;LT
-@R6
-M=M-M     // R6 = R6 - R8
 @R8
 D=M
 @R6
@@ -65,16 +63,23 @@ M=M+1
 (AFTER_LOOP)
 // R6 now holds remainder, R2 holds abs(quotient)
 
-// Determine sign of quotient
+// Check if signs of x and y are different: R11 = 1 if different, 0 if same
 @R7
 D=M
 @R10
-M=D       // R10 = x < 0
+M=D        // R10 = x negative?
 @R9
 D=M
-D=D^M     // If x and y signs differ, result is negative
 @R11
-M=D       // R11 = quotient should be negated?
+M=0
+D=D-M
+@SKIP_SIGN
+D;JEQ      // If R7 == R9, skip
+@R11
+M=1        // If different signs, R11 = 1
+(SKIP_SIGN)
+
+// Apply sign to quotient if needed
 @R11
 D=M
 @SKIP_Q_NEGATE
@@ -83,7 +88,7 @@ D;JEQ
 M=-M
 (SKIP_Q_NEGATE)
 
-// Remainder should have same sign as x
+// Apply sign to remainder to match sign of x
 @R7
 D=M
 @SKIP_R_NEGATE
@@ -108,11 +113,14 @@ M=D
 
 (DIV_BY_ZERO)
 @R4
-M=1       // Set error flag
+M=1       // Set invalid flag
 @R2
-M=0       // Zero out result
+M=0
 @R3
 M=0
+(END)
+@END
+0;JMP
 (END)
 @END
 0;JMP
