@@ -1,4 +1,4 @@
-// Hack Assembly: SumArrayEntries.asm
+// Hack assembly program for integer division
 // Inputs: R0 = x (dividend), R1 = y (divisor)
 // Outputs: R2 = quotient, R3 = remainder, R4 = flag (1 if invalid)
 
