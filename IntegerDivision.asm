@@ -1,119 +1,67 @@
-// IntegerDivision.asm
-// Input: R0 = x (dividend), R1 = y (divisor)
-// Output:
-//   R2 = quotient m
-//   R3 = remainder q
-//   R4 = flag (1 if invalid, 0 otherwise)
-
-// Step 1: Check if y == 0 -> invalid
-@R1
-D=M
+// Hack assembly program for integer division
+// Registers usage:
+// R0 - Dividend (x)
+// R1 - Divisor (y)
+// R2 - Quotient (m)
+// R3 - Remainder (q)
+// R4 - Division valid flag (1 if invalid, 0 otherwise)
+@R1 // Load divisor (y)
+D=M // D = y
 @DIV_BY_ZERO
-D;JEQ
-
-// Step 2: Copy x to R5, y to R6
+D;JEQ // If y == 0, jump to error handling
+// Initialize quotient and remainder
+@R2
+M=0 // R2 (m) = 0
 @R0
-D=M
-@R5
-M=D      // R5 = x
-
-@R1
-D=M
-@R6
-M=D      // R6 = y
-
-// Step 3: Determine sign of x (R7) and y (R8)
-@R5
-D=M
-@R7
-M=0
-@X_POS
-D;JGE
-@R7
-M=1      // x < 0
-D=-D
-(X_POS)
-@R9
-M=D      // R9 = |x|
-
-@R6
-D=M
-@R8
-M=0
-@Y_POS
-D;JGE
-@R8
-M=1      // y < 0
-D=-D
-(Y_POS)
-@R10
-M=D     // R10 = |y|
-
-// Step 4: Initialize quotient
-@R2
-M=0
-
-// Step 5: Loop: while |x| >= |y|, subtract and count
-(LOOP)
-@R9
-D=M
-@R10
-D=D-M
-@AFTER_LOOP
-D;LT
-
-@R10
-D=M
-@R9
-M=M-D
-
-@R2
-M=M+1
-@LOOP
-0;JMP
-
-(AFTER_LOOP)
-// R9 = remainder
-@R9
-D=M
+D=M // D = x
 @R3
-M=D
-
-// Step 6: Adjust quotient sign if x and y have different signs
-@R7
-D=M
-@R8
-D=D-M
-@SKIP_Q_NEG
-D;JEQ
-@R2
-M=-M
-(SKIP_Q_NEG)
-
-// Step 7: Adjust remainder sign to match x
-@R7
-D=M
-@SKIP_R_NEG
-D;JEQ
-@R3
-M=-M
-(SKIP_R_NEG)
-
-// Step 8: Valid division
+M=D // R3 (q) = x
+// Set flag to valid (0)
 @R4
 M=0
-@END
-0;JMP
-
-// Step 9: Division by zero handler
-(DIV_BY_ZERO)
-@R2
-M=0
+// Determine sign of quotient
+@R0
+D=M // D = x
+@POSITIVE_X
+D;JGE // If x >= 0, jump to POSITIVE_X
+@R1
+D=M // D = y
+@NEGATIVE_DIV
+D;JGE // If y >= 0, jump to NEGATIVE_DIV
+@POSITIVE_X
+// While remainder >= divisor, subtract divisor and increment quotient
 @R3
-M=0
+D=M
+@DONE
+D-M;JLT // If remainder < divisor, done
+@R3
+M=M-D // remainder -= divisor
+@R2
+M=M+1 // quotient++
+@POSITIVE_X
+0;JMP // Loop
+@NEGATIVE_DIV
+@R3
+D=M
+@DONE
+D+M;JGT // If remainder > divisor (negative case), done
+@R3
+M=M+D // remainder += divisor
+@R2
+M=M-1 // quotient--
+@NEGATIVE_DIV
+0;JMP // Loop
+// Error handling: Set flag to 1 and exit (y==0)
+@DIV_BY_ZERO
 @R4
 M=1
-
-(END)
 @END
 0;JMP
+// Done: Store final results
+@DONE
+@R2
+M=M // Store quotient
+@R3
+M=M // Store remainder
+@END
+0;JMP // End program
