@@ -1,123 +1,118 @@
 // Hack Assembly: SumArrayEntries.asm
-// Integer Division: R0 / R1 -> Quotient in R2, Remainder in R3
-// If R1 == 0, set R4 = 1 (invalid), else R4 = 0
+// Inputs: R0 = x (dividend), R1 = y (divisor)
+// Outputs: R2 = quotient, R3 = remainder, R4 = flag (1 if invalid)
 
-// Step 1: Check for division by zero
 @R1
 D=M
 @DIV_BY_ZERO
-D;JEQ       // If divisor is 0, jump
+D;JEQ       // if y == 0 -> invalid
 
-// Step 2: Set valid flag to 0
-@R4
-M=0
-
-// Step 3: Store x and y
+// Save signs
 @R0
 D=M
-@X
-M=D        // X = x
+@XNEG
+D;JLT
+@XNEG
+M=0        // x is positive
+@XABS
+D;JMP
+(XNEG)
+@XNEG
+M=1
+D=-D
+(XABS)
+@XABSVAL
+M=D        // |x| -> XABSVAL
+
 @R1
 D=M
-@Y
-M=D        // Y = y
-
-// Step 4: Take absolute value of x => |x| in R5
-@X
-D=M
-@XSIGN
-M=0
-@XPOS
-D;JGE
-@XSIGN
+@YNEG
+D;JLT
+@YNEG
+M=0        // y is positive
+@YABS
+D;JMP
+(YNEG)
+@YNEG
 M=1
 D=-D
-(XPOS)
-@R5
-M=D
+(YABS)
+@YABSVAL
+M=D        // |y| -> YABSVAL
 
-// Step 5: Take absolute value of y => |y| in R6
-@Y
-D=M
-@YSIGN
-M=0
-@YPOS
-D;JGE
-@YSIGN
-M=1
-D=-D
-(YPOS)
-@R6
-M=D
-
-// Step 6: Initialize quotient (R2) = 0
+// Clear quotient
 @R2
 M=0
 
-// Step 7: Loop: While |x| >= |y|, subtract and count
-(DIV_LOOP)
-@R5
+// Division loop: while |x| >= |y|
+(LOOP)
+@XABSVAL
 D=M
-@R6
+@YABSVAL
 D=D-M
-@AFTER_DIV
-D;LT       // If |x| < |y|, exit loop
+@ENDLOOP
+D;LT
 
-@R6
+@XABSVAL
+M=M
+@YABSVAL
 D=M
-@R5
-M=M-D      // R5 = R5 - R6
+@XABSVAL
+M=M-D
+
 @R2
-M=M+1      // Quotient++
-@DIV_LOOP
+M=M+1
+@LOOP
 0;JMP
 
-(AFTER_DIV)
-// Step 8: R5 is remainder now. Copy to R3
-@R5
+(ENDLOOP)
+// Save remainder
+@XABSVAL
 D=M
 @R3
 M=D
 
-// Step 9: Fix quotient sign if x and y have opposite signs
-@XSIGN
+// Apply sign to quotient if needed (if x and y have different signs)
+@XNEG
 D=M
-@YSIGN
-D=D-M
-@SKIP_NEG_QUOT
-D;JEQ
+@YNEG
+D=D+M
+@TWO
+@Q_SIGN_DONE
+D;JEQ      // if signs same, skip negation
+
 @R2
 M=-M
-(SKIP_NEG_QUOT)
+(Q_SIGN_DONE)
 
-// Step 10: Fix remainder sign to match x
-@XSIGN
+// Remainder has same sign as x
+@XNEG
 D=M
-@SKIP_NEG_REM
+@R3
+D=M
+@POS_REMAINDER
 D;JEQ
 @R3
 M=-M
-(SKIP_NEG_REM)
+(POS_REMAINDER)
+
+// Set valid flag
+@R4
+M=0
 
 @END
 0;JMP
 
-// Division by zero handler
 (DIV_BY_ZERO)
-@R4
-M=1       // Set invalid flag
 @R2
-M=0       // Zero quotient
+M=0
 @R3
-M=0       // Zero remainder
+M=0
+@R4
+M=1
 (END)
 @END
 0;JMP
 
-// TEMP REGISTERS USED:
-(X)     // R13
-(Y)     // R14
-(XSIGN) // R10 = 1 if x < 0
-(YSIGN) // R11 = 1 if y < 0
-(R5)    // = |x| (reduced)
-(R6)    // = |y|
+// Temp registers
+// XABSVAL = R5, YABSVAL = R6, XNEG = R7, YNEG = R8
