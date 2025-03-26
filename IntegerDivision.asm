@@ -1,126 +1,117 @@
-// Integer Division: R0 / R1 = Quotient in R2, Remainder in R3
-// If R1 == 0, set R4 = 1 (invalid), else R4 = 0
+// Inputs: R0 = x (dividend), R1 = y (divisor)
+// Outputs: R2 = quotient, R3 = remainder, R4 = flag (1 if invalid)
 
-// Check if divisor is zero
 @R1
 D=M
 @DIV_BY_ZERO
-D;JEQ
+D;JEQ       // if y == 0 -> invalid
 
-// Initialize
-@R2
-M=0        // Quotient = 0
-@R3
-M=0        // Remainder = 0
-@R4
-M=0        // Valid flag = 0
-
-// Store absolute value of R0 (x) in R6, and x < 0 flag in R7
+// Save signs
 @R0
 D=M
-@R7
-M=0
-@X_POSITIVE
-D;JGE
-@R7
+@XNEG
+D;JLT
+@XNEG
+M=0        // x is positive
+@XABS
+D;JMP
+(XNEG)
+@XNEG
 M=1
 D=-D
-(X_POSITIVE)
-@R6
-M=D        // R6 = |x|
+(XABS)
+@XABSVAL
+M=D        // |x| -> XABSVAL
 
-// Store absolute value of R1 (y) in R8, and y < 0 flag in R9
 @R1
 D=M
-@R9
-M=0
-@Y_POSITIVE
-D;JGE
-@R9
+@YNEG
+D;JLT
+@YNEG
+M=0        // y is positive
+@YABS
+D;JMP
+(YNEG)
+@YNEG
 M=1
 D=-D
-(Y_POSITIVE)
-@R8
-M=D        // R8 = |y|
+(YABS)
+@YABSVAL
+M=D        // |y| -> YABSVAL
 
-// Loop: Subtract y from x until x < y
+// Clear quotient
+@R2
+M=0
+
+// Division loop: while |x| >= |y|
 (LOOP)
-@R6
+@XABSVAL
 D=M
-@R8
+@YABSVAL
 D=D-M
-@AFTER_LOOP
+@ENDLOOP
 D;LT
-@R8
+
+@XABSVAL
+M=M
+@YABSVAL
 D=M
-@R6
+@XABSVAL
 M=M-D
+
 @R2
 M=M+1
 @LOOP
 0;JMP
 
-(AFTER_LOOP)
-// R6 now holds remainder, R2 holds abs(quotient)
-
-// Check if signs of x and y are different: R11 = 1 if different, 0 if same
-@R7
-D=M
-@R10
-M=D        // R10 = x negative?
-@R9
-D=M
-@R11
-M=0
-D=D-M
-@SKIP_SIGN
-D;JEQ      // If R7 == R9, skip
-@R11
-M=1        // If different signs, R11 = 1
-(SKIP_SIGN)
-
-// Apply sign to quotient if needed
-@R11
-D=M
-@SKIP_Q_NEGATE
-D;JEQ
-@R2
-M=-M
-(SKIP_Q_NEGATE)
-
-// Apply sign to remainder to match sign of x
-@R7
-D=M
-@SKIP_R_NEGATE
-D;JEQ
-@R6
-M=-M
-(SKIP_R_NEGATE)
-
-// Save results
-@R2
-D=M
-@R2
-M=D
-
-@R6
+(ENDLOOP)
+// Save remainder
+@XABSVAL
 D=M
 @R3
 M=D
+
+// Apply sign to quotient if needed (if x and y have different signs)
+@XNEG
+D=M
+@YNEG
+D=D+M
+@TWO
+@Q_SIGN_DONE
+D;JEQ      // if signs same, skip negation
+
+@R2
+M=-M
+(Q_SIGN_DONE)
+
+// Remainder has same sign as x
+@XNEG
+D=M
+@R3
+D=M
+@POS_REMAINDER
+D;JEQ
+@R3
+M=-M
+(POS_REMAINDER)
+
+// Set valid flag
+@R4
+M=0
 
 @END
 0;JMP
 
 (DIV_BY_ZERO)
-@R4
-M=1       // Set invalid flag
 @R2
 M=0
 @R3
 M=0
+@R4
+M=1
 (END)
 @END
 0;JMP
-(END)
-@END
-0;JMP
+
+// Temp registers
+// XABSVAL = R5, YABSVAL = R6, XNEG = R7, YNEG = R8
