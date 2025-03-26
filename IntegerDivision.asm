@@ -1,63 +1,70 @@
-// Hack assembly program for integer division
-// Inputs: R0 = x (dividend), R1 = y (divisor)
-// Outputs: R2 = quotient, R3 = remainder, R4 = flag (1 if invalid)
+// IntegerDivision.asm
+// Input: R0 = x (dividend), R1 = y (divisor)
+// Output:
+//   R2 = quotient m
+//   R3 = remainder q
+//   R4 = flag (1 if invalid, 0 otherwise)
 
+// Step 1: Check if y == 0 -> invalid
 @R1
 D=M
 @DIV_BY_ZERO
-D;JEQ       // if y == 0 -> invalid
+D;JEQ
 
-// Save signs
+// Step 2: Copy x to R5, y to R6
 @R0
 D=M
-@XNEG
-D;JLT
-@XNEG
-M=0        // x is positive
-@XABS
-D;JMP
-(XNEG)
-@XNEG
-M=1
-D=-D
-(XABS)
-@XABSVAL
-M=D        // |x| -> XABSVAL
+@R5
+M=D      // R5 = x
 
 @R1
 D=M
-@YNEG
-D;JLT
-@YNEG
-M=0        // y is positive
-@YABS
-D;JMP
-(YNEG)
-@YNEG
-M=1
-D=-D
-(YABS)
-@YABSVAL
-M=D        // |y| -> YABSVAL
+@R6
+M=D      // R6 = y
 
-// Clear quotient
+// Step 3: Determine sign of x (R7) and y (R8)
+@R5
+D=M
+@R7
+M=0
+@X_POS
+D;JGE
+@R7
+M=1      // x < 0
+D=-D
+(X_POS)
+@R9
+M=D      // R9 = |x|
+
+@R6
+D=M
+@R8
+M=0
+@Y_POS
+D;JGE
+@R8
+M=1      // y < 0
+D=-D
+(Y_POS)
+@R10
+M=D     // R10 = |y|
+
+// Step 4: Initialize quotient
 @R2
 M=0
 
-// Division loop: while |x| >= |y|
+// Step 5: Loop: while |x| >= |y|, subtract and count
 (LOOP)
-@XABSVAL
+@R9
 D=M
-@YABSVAL
+@R10
 D=D-M
-@ENDLOOP
+@AFTER_LOOP
 D;LT
 
-@XABSVAL
-M=M
-@YABSVAL
+@R10
 D=M
-@XABSVAL
+@R9
 M=M-D
 
 @R2
@@ -65,44 +72,40 @@ M=M+1
 @LOOP
 0;JMP
 
-(ENDLOOP)
-// Save remainder
-@XABSVAL
+(AFTER_LOOP)
+// R9 = remainder
+@R9
 D=M
 @R3
 M=D
 
-// Apply sign to quotient if needed (if x and y have different signs)
-@XNEG
+// Step 6: Adjust quotient sign if x and y have different signs
+@R7
 D=M
-@YNEG
-D=D+M
-@TWO
-@Q_SIGN_DONE
-D;JEQ      // if signs same, skip negation
-
+@R8
+D=D-M
+@SKIP_Q_NEG
+D;JEQ
 @R2
 M=-M
-(Q_SIGN_DONE)
+(SKIP_Q_NEG)
 
-// Remainder has same sign as x
-@XNEG
+// Step 7: Adjust remainder sign to match x
+@R7
 D=M
-@R3
-D=M
-@POS_REMAINDER
+@SKIP_R_NEG
 D;JEQ
 @R3
 M=-M
-(POS_REMAINDER)
+(SKIP_R_NEG)
 
-// Set valid flag
+// Step 8: Valid division
 @R4
 M=0
-
 @END
 0;JMP
 
+// Step 9: Division by zero handler
 (DIV_BY_ZERO)
 @R2
 M=0
@@ -110,9 +113,7 @@ M=0
 M=0
 @R4
 M=1
+
 (END)
 @END
 0;JMP
-
-// Temp registers
-// XABSVAL = R5, YABSVAL = R6, XNEG = R7, YNEG = R8
